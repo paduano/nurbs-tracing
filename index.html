@@ -20,10 +20,27 @@
             padding: 5px;
             text-align:center;
         }
+
+        .container{
+            margin: 0 auto;
+            width: 500px;
+        }
+        .container label{
+            display: inline-block;
+            float: left;
+            clear: left;
+            width: 250px;
+            text-align: right;
+        }
+        .container input {
+            display: inline-block;
+            float: left;
+            width:60px;
+        }
+
     </style>
 </head>
 <body>
-
 
 <script type="x-shader/x-vertex" id="vertexshader">
 
@@ -55,6 +72,7 @@
 			uniform float time;
 			uniform float speed;
 			uniform float baseOpacity;
+			uniform float totLife;
 
 			varying vec3 vColor;
 			varying float yValue;
@@ -63,8 +81,7 @@
 
 			void main() {
                 float positionValue = vColor.x;
-                float startDying = 2.3;
-                float totLife = 4.0;
+                float startDying = totLife / 1.9;
 
                 float opacity = 0.0;
                 float progress = time*speed;//mod((time)*0.3,4.0);
@@ -107,6 +124,23 @@
 
 </script>
 
+<div id="settings" style="text-align: center; padding: 10px;">
+    <h2>Settings</h2>
+    <form  class="container">
+        <label>Number of control lines: </label><input type="text" id="control-lines" id="" value="500"><br>
+        <label>Rays for line: </label><input type="text" id="ray-count" value="50"><br>
+        <label>Curling: </label><input type="text" id="curling" value="4"><br>
+        <label>Curling Randomness: </label><input type="text" id="curling-randomness" value="1.0"><br>
+        <label>Line speed: </label><input type="text" id="speed" value="2.0"><br>
+        <label>Line life: </label><input type="text" id="life" value="4.0"><br>
+        <label>Lines spawn: </label><input type="text" id="lines-per-frame" value="4"><br>
+
+    </form>
+    <div style="width:200px; text-align: center; margin: 0 auto; padding: 20px ">
+        <button type="button" onclick="loadModelAndGenerate()">Generate</button>
+    </div>
+
+</div>
 
 <canvas id="debug" style="position:absolute; left:100px"></canvas>
 
@@ -117,6 +151,8 @@
 <script src="js/lib/stats.min.js"></script>
 <script src="js/lib/OBJLoader.js"></script>
 <script src="js/lib/Raycaster.js"></script>
+<script src="js/lib/jquery-2.1.1.js"></script>
+<script src="js/lib/underscore.js"></script>
 
 <script src="js/splineGenerator.js"></script>
 
@@ -144,7 +180,7 @@
     var meshName = 'resources/face_downloaded.obj';
 
     init();
-    animate();
+
 
 
 
@@ -153,17 +189,17 @@
 
 
 
-        container = document.createElement( 'div' );
+       container = document.createElement( 'div' );
         document.body.appendChild( container );
-
+/*
         var info = document.createElement( 'div' );
         info.style.position = 'absolute';
         info.style.top = '30px';
-        info.style.width = '100%';
+        info.style.width = '100px';
         info.style.textAlign = 'center';
-        info.innerHTML = 'Drag to spin';
+        //info.innerHTML = 'Drag to spin';
         container.appendChild( info );
-
+*/
         camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 1, 2000 );
         camera.position.set( 0, 150, 750 );
 
@@ -179,6 +215,35 @@
         scene.add( group );
 
 
+
+
+
+        //
+
+        renderer = new THREE.WebGLRenderer( { antialias: true } );
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+        container.appendChild( renderer.domElement );
+
+        stats = new Stats();
+        stats.domElement.style.position = 'absolute';
+        stats.domElement.style.top = '0px';
+        container.appendChild( stats.domElement );
+
+        container.addEventListener( 'mousedown', onDocumentMouseDown, false );
+        container.addEventListener( 'touchstart', onDocumentTouchStart, false );
+        container.addEventListener( 'touchmove', onDocumentTouchMove, false );
+
+        //
+
+        window.addEventListener( 'resize', onWindowResize, false );
+
+    }
+
+
+    function loadModelAndGenerate() {
+
+        $("button").prop("disabled",true);
 
         //GEOMETRY
         var texture = new THREE.Texture();
@@ -233,27 +298,6 @@
 
         }, onProgress, onError );
 
-
-
-        //
-
-        renderer = new THREE.WebGLRenderer( { antialias: true } );
-        renderer.setSize( window.innerWidth, window.innerHeight );
-
-        container.appendChild( renderer.domElement );
-
-        stats = new Stats();
-        stats.domElement.style.position = 'absolute';
-        stats.domElement.style.top = '0px';
-        container.appendChild( stats.domElement );
-
-        document.addEventListener( 'mousedown', onDocumentMouseDown, false );
-        document.addEventListener( 'touchstart', onDocumentTouchStart, false );
-        document.addEventListener( 'touchmove', onDocumentTouchMove, false );
-
-        //
-
-        window.addEventListener( 'resize', onWindowResize, false );
 
     }
 
@@ -336,6 +380,11 @@
 
     //
 
+    function startanimate() {
+        $('#settings').hide();
+        animate();
+    }
+
     function animate() {
 
         requestAnimationFrame( animate );
@@ -352,14 +401,24 @@
     var initialInterval = 2;
     var endInterval = 0.02;
     var currentInterval = initialInterval;
-    var transitionTime = 20;
+    var transitionTime = 15;
     function render() {
 
 
         var delta = clock.getDelta();
-        linesUniforms.forEach(function(u){
+
+        var toRemove = [];
+        linesUniforms.forEach(function(el){
+            var u = el.uniform;
             u.time.value += delta;
+            if(u.time.value >= u.totLife.value){
+                group.remove(el.line);
+
+            }
         });
+
+        linesUniforms = linesUniforms.filter(function(el){return el.uniform.time.value <= el.uniform.totLife.value});
+
 
         var elapsedTime = clock.getElapsedTime();
         if(renderStartTime == 0.0 && objObject){
@@ -369,12 +428,11 @@
 
         var time =  elapsedTime - renderStartTime;
 
-
         if(objObject && elapsedTime > last + waitInterval ){
             //GENERATE SPLINE HERE??
-            addRandomSpline();
-            addRandomSpline();
-            addRandomSpline();
+            for(var i = 0; i < presetLinesPerFrame; i++){
+                addRandomSpline();
+            }
 
             last = elapsedTime;
 
@@ -383,7 +441,7 @@
         }
 
 
-//VIEW ROTATION
+        //VIEW ROTATION
         group.rotation.y += ( targetRotation - group.rotation.y ) * 0.05;
 
         //group.rotation.y += ( delta ) * 0.1;

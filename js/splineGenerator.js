@@ -1,43 +1,65 @@
 var precalculatedSplines = [];
 
+var presetSpeed = 2.0;
+var presetTotLife = 4.0;
+var presetLinesPerFrame = 3.0;
+var presetCurlingRandomness = 2.0;
+
 function generateSplinesPoints(object) {
-    var quantity = 500;
-
+    var quantity = parseInt($('#control-lines').val());
+    var curling = parseFloat($('#curling').val());
+    var numberOfControlPoints = parseFloat($('#ray-count').val());
+    presetLinesPerFrame = parseInt($('#lines-per-frame').val());
+    presetSpeed = parseFloat($('#speed').val());
+    presetTotLife = parseFloat($('#life').val());
+    presetCurlingRandomness = parseFloat($('#curling-randomness').val());
     var lastPercentagePrinted = 0;
-    for( var i = 0; i < quantity; i++) {
-        var points = generatePoints(object, 0, 400, 200,
-            Math.random()*2*3.14,
-            -2 + Math.random()*4); //spin
-        precalculatedSplines.push(points);
 
+    percentage = window.setInterval(function(){
         //percentage complete
-        var perc = (i / quantity) * 100;
-        if(perc > lastPercentagePrinted){
-            console.log(parseInt(perc) + "%");
-            lastPercentagePrinted += 10;
+        var perc = (precalculatedSplines.length / quantity) * 100;
+        $('button').text(parseInt(perc) + "%");
+        console.log(perc);
+    },50);
+
+    window.setTimeout(function(){
+        for( var i = 0; i < quantity; i++) {
+            var points = generatePoints(object, 0, 400, 200,
+                Math.random()*2*3.14,
+                curling - presetCurlingRandomness*Math.random()*curling,numberOfControlPoints); //spin
+            precalculatedSplines.push(points);
+
         }
 
-    }
+        $('button').attr('onclick', 'startanimate()');
+        $("button").prop("disabled",false);
+        $("button").text('start');
+
+        clearTimeout(percentage);
+    },10);
+
 
 };
+
+
 
 function addRandomSpline() {
     var id = Math.floor(Math.random() * precalculatedSplines.length + 1);
     var points = precalculatedSplines[id];
     var geometry = generateNurbsGeometry(points);
     var u = generateNurbsObject(geometry);
-    u.speed.value = Math.random() * 2.0;
+    u.speed.value = Math.random() * presetSpeed;
     u.baseOpacity.value = Math.random() * 1.0;
+    u.totLife.value = presetTotLife;
 }
 
-function generatePoints(object, startHeight, endHeight, radius, initialAngle, numberOfSpin){
+function generatePoints(object, startHeight, endHeight, radius, initialAngle, numberOfSpin,numberOfControlPoints){
     var scaleObject = 200;
 
     var points = [];
     //SPLINE PROPERTY
     var radius = 50;
     var height = 3;
-    var numberOfControlPoints = 50;
     var yStart = 0;
     var yDelta = 1;
 
@@ -149,6 +171,7 @@ function generateNurbsObject(geometry) {
         opacity:   { type: "f", value: 0.3 },
         time:      { type: "f", value: 0 },
         startTime: { type: "f", value: 0.0 },
+        totLife: { type: "f", value: 4.0 },
         speed:   { type: "f", value: 0.1 },
         baseOpacity:   { type: "f", value: 1.0 }
 
@@ -176,6 +199,6 @@ function generateNurbsObject(geometry) {
     nurbsLine.position.set( 0, -200, 0 );
     group.add( nurbsLine );
 
-    linesUniforms.push(uniforms);
+    linesUniforms.push({uniform:uniforms, line:nurbsLine});
     return uniforms;
 }
