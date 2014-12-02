@@ -15,31 +15,40 @@ function generateSplinesPoints(object) {
     presetCurlingRandomness = parseFloat($('#curling-randomness').val());
     var lastPercentagePrinted = 0;
 
-    percentage = window.setInterval(function(){
-        //percentage complete
-        var perc = (precalculatedSplines.length / quantity) * 100;
-        $('button').text(parseInt(perc) + "%");
-        console.log(perc);
-    },50);
 
-    window.setTimeout(function(){
-        for( var i = 0; i < quantity; i++) {
+    function computationalStep(i) {
+        for (var j = 0; j < quantity/100; j++) {
             var points = generatePoints(object, 0, 400, 200,
-                Math.random()*2*3.14,
-                curling - presetCurlingRandomness*Math.random()*curling,numberOfControlPoints); //spin
+                Math.random() * 2 * 3.14,
+                curling - presetCurlingRandomness * Math.random() * curling, numberOfControlPoints); //spin
             precalculatedSplines.push(points);
-
+            i += 1;
         }
 
-        $('button').attr('onclick', 'startanimate()');
-        $("button").prop("disabled",false);
-        $("button").text('start');
+        if (i < quantity) {
 
-        clearTimeout(percentage);
-    },10);
+            var perc = (precalculatedSplines.length / quantity) * 100;
+            $("button").prop("disabled",true);
+            $('button').text("computing: " + parseInt(perc) + "%  ");
 
+            console.log('bau');
+
+            window.setTimeout(function () {
+                computationalStep(i);
+            }, 1);
+        } else {
+            $('button').attr('onclick', 'startanimate()');
+            $("button").prop("disabled",false);
+            $("button").text('start');
+        }
+
+    };
+
+    computationalStep(0);
 
 };
+
+
 
 
 
